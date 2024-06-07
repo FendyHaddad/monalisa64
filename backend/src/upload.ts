@@ -20,7 +20,8 @@ uploadRouter.post('/', upload.array('images', 10), async (req, res) => {  // Adj
   try {
     for (const file of req.files as Express.Multer.File[]) {
       const inputPath = file.path;  // Get the path of the uploaded file
-      const outputPath = path.join('uploads', `${file.filename}.webp`);  // Define the path for the compressed file
+      const originalName = path.parse(file.originalname).name;  // Get the original file name without extension
+      const outputPath = path.join('uploads', `${originalName}.webp`);  // Define the path for the compressed file
 
       console.log(`Processing file: ${inputPath}`);  // Log the start of the file processing
       await sharp(inputPath)  // Use sharp to process the image
@@ -31,7 +32,7 @@ uploadRouter.post('/', upload.array('images', 10), async (req, res) => {  // Adj
       fs.unlinkSync(inputPath);  // Delete the original uploaded file
 
       console.log(`File processed successfully: ${outputPath}`);  // Log the successful file processing
-      fileInfos.push({ fileUrl: `http://localhost:3000/uploads/${file.filename}.webp`, compressedSize });
+      fileInfos.push({ fileUrl: `http://localhost:3000/uploads/${originalName}.webp`, compressedSize });
     }
 
     res.json(fileInfos);  // Respond with the URLs and sizes of the compressed files
