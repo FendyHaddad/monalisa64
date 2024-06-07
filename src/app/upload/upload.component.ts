@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import {Component} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {CommonModule} from '@angular/common';
 import imageCompression from 'browser-image-compression';
 
 @Component({
@@ -37,8 +37,7 @@ export class UploadComponent {
       useWebWorker: true,
       initialQuality: 0.6
     };
-    const compressedFile = await imageCompression(file, options);
-    return compressedFile;
+    return await imageCompression(file, options);
   }
 
   onUpload(): void {
