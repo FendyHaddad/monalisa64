@@ -8,27 +8,33 @@ const upload = multer({ dest: 'uploads/' });  // Configure multer to save upload
 
 export const uploadRouter = express.Router();  // Create a new router
 
-// Handle POST requests to the upload endpoint
-uploadRouter.post('/', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    console.error('No file uploaded');  // Log an error if no file is uploaded
-    return res.status(400).send('No file uploaded.');  // Respond with a 400 status code if no file is uploaded
+// Handle POST requests to the upload endpoint for multiple files
+uploadRouter.post('/', upload.array('images', 10), async (req, res) => {  // Adjust the limit as needed
+  if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+    console.error('No files uploaded');  // Log an error if no files are uploaded
+    return res.status(400).send('No files uploaded.');  // Respond with a 400 status code if no files are uploaded
   }
 
-  const inputPath = req.file.path;  // Get the path of the uploaded file
-  const outputPath = path.join('uploads', `${req.file.filename}.webp`);  // Define the path for the compressed file
+  const fileInfos: { fileUrl: string, compressedSize: number }[] = [];
 
   try {
-    console.log(`Processing file: ${inputPath}`);  // Log the start of the file processing
-    await sharp(inputPath)  // Use sharp to process the image
-      .toFormat('webp')  // Convert the image to WebP format
-      .toFile(outputPath);  // Save the converted image to the output path
+    for (const file of req.files as Express.Multer.File[]) {
+      const inputPath = file.path;  // Get the path of the uploaded file
+      const outputPath = path.join('uploads', `${file.filename}.webp`);  // Define the path for the compressed file
 
-    const compressedSize = fs.statSync(outputPath).size;  // Get the size of the compressed file
-    fs.unlinkSync(inputPath);  // Delete the original uploaded file
+      console.log(`Processing file: ${inputPath}`);  // Log the start of the file processing
+      await sharp(inputPath)  // Use sharp to process the image
+        .toFormat('webp')  // Convert the image to WebP format
+        .toFile(outputPath);  // Save the converted image to the output path
 
-    console.log(`File processed successfully: ${outputPath}`);  // Log the successful file processing
-    res.json({ fileUrl: `http://localhost:3000/uploads/${req.file.filename}.webp`, compressedSize });  // Respond with the URL and size of the compressed file
+      const compressedSize = fs.statSync(outputPath).size;  // Get the size of the compressed file
+      fs.unlinkSync(inputPath);  // Delete the original uploaded file
+
+      console.log(`File processed successfully: ${outputPath}`);  // Log the successful file processing
+      fileInfos.push({ fileUrl: `http://localhost:3000/uploads/${file.filename}.webp`, compressedSize });
+    }
+
+    res.json(fileInfos);  // Respond with the URLs and sizes of the compressed files
   } catch (error) {
     console.error(`Error processing image: ${error}`);  // Log any errors that occur during processing
     res.status(500).send('Error processing image.');  // Respond with a 500 status code if an error occurs

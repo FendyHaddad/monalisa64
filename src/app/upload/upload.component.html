@@ -1,5 +1,13 @@
 <div class="container">
-  <h2 class="title">Upload Image</h2>
-  <input type="file" (change)="onFileSelected($event)" class="file-input" />
+  <h2 class="title">Upload Images</h2>
+  <input type="file" (change)="onFileSelected($event)" class="file-input" multiple />
   <button (click)="onUpload()" class="upload-button">Upload</button>
+
+  <div *ngFor="let fileInfo of fileInfos" class="modal">
+    <h3>Image Information</h3>
+    <p>Original File Size: {{ fileInfo.originalFileSize / 1024 / 1024 | number:'1.2-2' }} MB</p>
+    <p *ngIf="fileInfo.fileUrl">Compressed File Size: {{ fileInfo.compressedFileSize / 1024 | number:'1.2-2' }} KB</p>
+    <button *ngIf="fileInfo.fileUrl" (click)="onDownload(fileInfo.fileUrl)" class="download-button">Download</button>
+  </div>
+  <button *ngIf="fileInfos.length > 0" (click)="onCancel()" class="cancel-button">Cancel</button>
 </div>
