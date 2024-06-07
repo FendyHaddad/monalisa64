@@ -1,71 +1,91 @@
 import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import imageCompression from 'browser-image-compression';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule],  // Import CommonModule for using Angular built-in pipes
+  imports: [CommonModule],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.css']
 })
 export class UploadComponent {
-  selectedFiles: File[] = [];  // Store the selected files
-  fileInfos: { fileUrl: string, originalFileSize: number, compressedFileSize: number }[] = [];  // Store info for each uploaded file
+  selectedFiles: File[] = [];
+  fileInfos: { fileName: string, fileUrl: string, originalFileSize: number, estimatedFileSize: number, compressedFileSize: number }[] = [];
 
-  constructor(private http: HttpClient) {}  // Inject HttpClient for making HTTP requests
+  constructor(private http: HttpClient) {}
 
-  // Handle file selection event
-  onFileSelected(event: any): void {
-    this.selectedFiles = Array.from(event.target.files);  // Get the selected files from the event
-    this.fileInfos = this.selectedFiles.map(file => ({
-      fileUrl: '',
-      originalFileSize: file.size,
-      compressedFileSize: 0
-    }));  // Initialize fileInfos for each selected file
+  async onFileSelected(event: any): Promise<void> {
+    this.selectedFiles = Array.from(event.target.files);
+    this.fileInfos = await Promise.all(this.selectedFiles.map(async file => {
+      const compressedFile = await this.estimateCompressedSize(file);
+      return {
+        fileName: file.name,
+        fileUrl: '',
+        originalFileSize: file.size,
+        estimatedFileSize: compressedFile.size,
+        compressedFileSize: 0  // Initially set to 0
+      };
+    }));
   }
 
-  // Handle file upload event
+  async estimateCompressedSize(file: File): Promise<File> {
+    const options = {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 800,
+      useWebWorker: true,
+      initialQuality: 0.6
+    };
+    const compressedFile = await imageCompression(file, options);
+    return compressedFile;
+  }
+
   onUpload(): void {
     if (this.selectedFiles.length > 0) {
-      const formData = new FormData();  // Create a new FormData object
-      this.selectedFiles.forEach(file => formData.append('images', file, file.name));  // Append each selected file to the FormData object
+      const formData = new FormData();
+      this.selectedFiles.forEach(file => formData.append('images', file, file.name));
 
-      // Make a POST request to the backend to upload the files
       this.http.post<{ fileUrl: string, compressedSize: number }[]>('http://localhost:3000/api/upload', formData)
         .subscribe({
           next: responses => {
             responses.forEach((response, index) => {
-              this.fileInfos[index].fileUrl = response.fileUrl;  // Store the URL of the uploaded file
-              this.fileInfos[index].compressedFileSize = response.compressedSize;  // Store the compressed file size
+              this.fileInfos[index].fileUrl = response.fileUrl;
+              this.fileInfos[index].compressedFileSize = response.compressedSize;  // Update the actual compressed size
             });
           },
           error: err => {
-            console.error(err);  // Log errors to the console
-            alert('Error uploading files. Please try again.');  // Show an alert message if an error occurs
+            console.error(err);
+            alert('Error uploading files. Please try again.');
           }
         });
     } else {
-      console.error('No files selected');  // Log a message if no files are selected
-      alert('Please select files to upload.');  // Show an alert message if no files are selected
+      console.error('No files selected');
+      alert('Please select files to upload.');
     }
   }
 
-  // Handle file download event
   onDownload(fileUrl: string): void {
     if (fileUrl) {
-      const a = document.createElement('a');  // Create a new anchor element
-      a.href = fileUrl;  // Set the href attribute to the file URL
-      a.download = fileUrl.split('/').pop() || 'download';  // Set the download attribute to the file name
-      document.body.appendChild(a);  // Append the anchor element to the document body
-      a.click();  // Programmatically click the anchor element to trigger the download
-      document.body.removeChild(a);  // Remove the anchor element from the document body
+      const a = document.createElement('a');
+      a.href = fileUrl;
+      a.download = fileUrl.split('/').pop() || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }
 
-  // Handle cancel event
+  onDownloadAll(): void {
+    this.fileInfos.forEach(fileInfo => {
+      if (fileInfo.fileUrl) {
+        this.onDownload(fileInfo.fileUrl);
+      }
+    });
+  }
+
   onCancel(): void {
-    this.selectedFiles = [];  // Reset the selected files
-    this.fileInfos = [];  // Reset the file infos
+    this.selectedFiles = [];
+    this.fileInfos = [];
   }
 }
