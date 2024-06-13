@@ -9,7 +9,7 @@ const upload = multer({ dest: 'uploads/' });  // Configure multer to save upload
 export const uploadRouter = express.Router();  // Create a new router
 
 // Handle POST requests to the upload endpoint for multiple files
-uploadRouter.post('/', upload.array('images', 10), async (req, res) => {  // Adjust the limit as needed
+uploadRouter.post('/', upload.array('images', 20), async (req, res) => {  // Adjust the limit as needed
   if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
     console.error('No files uploaded');  // Log an error if no files are uploaded
     return res.status(400).send('No files uploaded.');  // Respond with a 400 status code if no files are uploaded
